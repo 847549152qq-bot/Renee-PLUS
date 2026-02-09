@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>英语语调诊断器 - 增强版</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.1/plotly.min.js" integrity="sha512-2eG1tWX2J7J0mW/5V9+6j+6W6k2VJc1M0Q/wC0U1K4D9h8QK2BdFc1KCo3I1M0Qj1L5CJpM5Gj1GFP9Q3L7DdA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        .content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .panel h2 {
+            color: #2c3e50;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4b6cb7;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3rem;
+        }
+        .panel h2 i {
+            color: #4b6cb7;
+        }
+        .sentence-container {
+            margin-bottom: 25px;
+        }
+        .sentence {
+            background: white;
+            border-left: 5px solid #3498db;
+            padding: 18px;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            line-height: 1.5;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            border-radius: 0 10px 10px 0;
+        }
+        .sentence-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn-sentence {
+            padding: 10px 18px;
+            background: linear-gradient(90deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .sentence-info {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+        .btn-record {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        .btn-stop {
+            background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+        .btn-play {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        .btn-upload {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            color: white;
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(0,0,0,0.1);
+        }
+        .btn:active:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 25px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #f8fcff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-area:hover {
+            background-color: #e8f4fc;
+        }
+        .upload-area i {
+            font-size: 2.5rem;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        .upload-area p {
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .upload-area .note {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+        #fileInput {
+            display: none;
+        }
+        .visualization {
+            margin-top: 20px;
+        }
+        .visualization h3 {
+            margin-bottom: 15px;
+            color: #34495e;
+            font-size: 1.1rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .diagnosis-result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #fffde7;
+            border-left: 5px solid #f1c40f;
+        }
+        .diagnosis-result h3 {
+            color: #d35400;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tip {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4fc;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+        .tip strong {
+            color: #2980b9;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f1f2f6;
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .analysis-status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+        .status-analyzing {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            color: #856404;
+        }
+        .status-complete {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+            color: #155724;
+        }
+        .feature-list {
+            margin-top: 15px;
+            padding-left: 20px;
+            color: #2c3e50;
+        }
+        .feature-list li {
+            margin-bottom: 8px;
+        }
+        @media (min-width: 768px) {
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            .header p {
+                font-size: 1.1rem;
+            }
+            .btn {
+                min-width: 160px;
+                padding: 16px 28px;
+                font-size: 1rem;
+            }
+            .chart-container {
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-wave-square"></i> 英语语调诊断器 · 增强版</h1>
+            <p>实时分析您的发音语调，提供精准反馈与改进建议</p>
+        </div>
+        
+        <div class="content">
+            <!-- 句子库与录音区域 -->
+            <div class="panel">
+                <h2><i class="fas fa-microphone-alt"></i> 录音与句子库</h2>
+                
+                <div class="sentence-container">
+                    <div class="sentence">
+                        <strong>练习句子：</strong> <span id="currentSentence">"I really think it's a great opportunity for us to collaborate."</span>
+                    </div>
+                    <div class="sentence-controls">
+                        <button id="newSentenceBtn" class="btn-sentence">
+                            <i class="fas fa-random"></i> 随机新句子
+                        </button>
+                        <div class="sentence-info">
+                            句子难度: <span id="difficultyLabel">中等</span> | 编号: <span id="sentenceId">#1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button id="recordBtn" class="btn btn-record">
+                        <i class="fas fa-circle"></i> 开始录音
+                    </button>
+                    <button id="stopBtn" class="btn btn-stop" disabled>
+                        <i class="fas fa-stop"></i> 停止录音
+                    </button>
+                    <button id="playBtn" class="btn btn-play" disabled>
+                        <i class="fas fa-play"></i> 播放录音
+                    </button>
+                </div>
+
+                <div class="upload-area" id="uploadBox">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p><strong>或上传您的录音文件进行分析</strong></p>
+                    <p>支持格式: MP3, WAV, M4A | 时长限制: 1分钟以内</p>
+                    <p class="note">点击此处或拖放文件到此处</p>
+                    <input type="file" id="fileInput" accept="audio/*">
+                </div>
+                <div id="uploadStatus"></div>
+
+                <div id="analysisStatus" class="analysis-status"></div>
+
+                <div class="tip">
+                    <strong><i class="fas fa-info-circle"></i> 使用提示：</strong> 
+                    您可以选择实时录音，或上传已有的录音文件（1分钟内）。系统将实时分析您的语调，并与标准语调进行对比。
+                </div>
+            </div>
+            
+            <!-- 分析与诊断区域 -->
+            <div class="panel">
+                <h2><i class="fas fa-chart-line"></i> 实时语调分析</h2>
+                
+                <div class="visualization">
+                    <h3>您的语调波形</h3>
+                    <div class="chart-container">
+                        <canvas id="userWaveform"></canvas>
+                    </div>
+                    <h3>标准语调波形</h3>
+                    <div class="chart-container">
+                        <canvas id="refWaveform"></canvas>
+                    </div>
+                </div>
+
+                <div class="diagnosis-result">
+                    <h3><i class="fas fa-stethoscope"></i> 实时诊断结果</h3>
+                    <p id="resultText">请开始录音或上传音频文件以获取分析结果。</p>
+                    <div id="feedbackList">
+                        <!-- 反馈会动态插入 -->
+                    </div>
+                    <div id="improvementTips" style="margin-top: 15px;">
+                        <!-- 改进建议会动态插入 -->
+                    </div>
+                </div>
+
+                <div class="tip">
+                    <strong><i class="fas fa-graduation-cap"></i> 本版核心功能：</strong>
+                    <ul class="feature-list">
+                        <li><strong>手机优化：</strong> 专为竖屏使用设计，操作更便捷</li>
+                        <li><strong>实时分析：</strong> 录音时实时分析音高、重音与节奏</li>
+                        <li><strong>多句子库：</strong> 海量练习句子，可随机切换</li>
+                        <li><strong>文件上传：</strong> 支持上传1分钟内的录音进行深度分析</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>增强版英语语调诊断器 | 支持实时分析、多句子库与文件上传 | 本系统为功能原型，分析结果基于算法模拟</p>
+            <p>© 2026 英语语调诊断器 </p>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioBlob = null;
+        let audioUrl = null;
+        let isRecording = false;
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let userChart = null;
+        let refChart = null;
+        let currentSource = 'record'; // 'record' 或 'upload'
+        let currentAudio = null;
+
+        // 句子库
+        const sentenceLibrary = [
+            { id: 1, text: "I really think it's a great opportunity for us to collaborate.", difficulty: "中等" },
+            { id: 2, text: "Could you please pass me the document on the table?", difficulty: "简单" },
+            { id: 3, text: "The conference will be held in the main auditorium at three o'clock.", difficulty: "中等" },
+            { id: 4, text: "She's been working on the project since last month, and the results are impressive.", difficulty: "较难" },
+            { id: 5, text: "If I were you, I would consider all the available options before making a decision.", difficulty: "较难" },
+            { id: 6, text: "The research findings have been published in a renowned scientific journal.", difficulty: "中等" },
+            { id: 7, text: "We need to address the issue as soon as possible to prevent further complications.", difficulty: "中等" },
+            { id: 8, text: "He's not only a brilliant engineer but also an effective team leader.", difficulty: "简单" },
+            { id: 9, text: "The company is planning to expand its operations to the Asian market next year.", difficulty: "较难" },
+            { id: 10, text: "Despite the initial challenges, the product launch was a tremendous success.", difficulty: "较难" }
+        ];
+        let currentSentenceIndex = 0;
+
+        // 页面加载初始化
+        window.onload = function() {
+            initCharts();
+            initEventListeners();
+            // 显示第一句
+            displayCurrentSentence();
+        };
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 录音控制
+            document.getElementById('recordBtn').addEventListener('click', startRecording);
+            document.getElementById('stopBtn').addEventListener('click', stopRecording);
+            document.getElementById('playBtn').addEventListener('click', playRecording);
+            
+            // 新句子按钮
+            document.getElementById('newSentenceBtn').addEventListener('click', getNewRandomSentence);
+            
+            // 文件上传
+            const uploadBox = document.getElementById('uploadBox');
+            const fileInput = document.getElementById('fileInput');
+            
+            uploadBox.addEventListener('click', () => fileInput.click());
+            uploadBox.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadBox.style.backgroundColor = '#e3f2fd';
+            });
+            uploadBox.addEventListener('dragleave', () => {
+                uploadBox.style.backgroundColor = '#f8fcff';
+            });
+            uploadBox.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadBox.style.backgroundColor = '#f8fcff';
+                if (e.dataTransfer.files.length) {
+                    handleUploadedFile(e.dataTransfer.files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleUploadedFile(e.target.files[0]);
+                }
+            });
+        }
+
+        // 初始化图表
+        function initCharts() {
+            const userCtx = document.getElementById('userWaveform').getContext('2d');
+            const refCtx = document.getElementById('refWaveform').getContext('2d');
+            
+            // 参考波形（模拟标准语调）
+            const refData = [];
+            for (let i = 0; i < 100; i++) {
+                refData.push(Math.sin(i * 0.2) * 0.8 + Math.sin(i * 0.5) * 0.5);
+            }
+            
+            refChart = new Chart(refCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 100}, (_, i) => i),
+                    datasets: [{
+                        label: '标准语调',
+                        data: refData,
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+            
+            // 用户波形（初始为空）
+            userChart = new Chart(userCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 100}, (_, i) => i),
+                    datasets: [{
+                        label: '你的语调',
+                        data: Array(100).fill(0),
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+        }
+
+        // 显示当前句子
+        function displayCurrentSentence() {
+            const sentence = sentenceLibrary[currentSentenceIndex];
+            document.getElementById('currentSentence').textContent = `"${sentence.text}"`;
+            document.getElementById('difficultyLabel').textContent = sentence.difficulty;
+            document.getElementById('sentenceId').textContent = `#${sentence.id}`;
+        }
+
+        // 获取新的随机句子
+        function getNewRandomSentence() {
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * sentenceLibrary.length);
+            } while (newIndex === currentSentenceIndex && sentenceLibrary.length > 1);
+            
+            currentSentenceIndex = newIndex;
+            displayCurrentSentence();
+            
+            // 重置一些状态
+            resetAnalysis();
+        }
+
+        // 开始录音
+        async function startRecording() {
+            if (isRecording) return;
+            
+            try {
+                // 重置状态
+                resetAnalysis();
+                currentSource = 'record';
+                
+                // 获取麦克风权限并开始录音
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    } 
+                });
+                
+                // 设置音频分析
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                // 开始实时波形更新
+                startRealTimeWaveform();
+                
+                // 设置MediaRecorder
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+                    audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // 启用播放按钮
+                    document.getElementById('playBtn').disabled = false;
+                    
+                    // 停止音频分析
+                    if (audioContext) {
+                        audioContext.close();
+                        audioContext = null;
+                    }
+                    
+                    // 分析录音
+                    analyzeRecording();
+                };
+                
+                // 开始录音
+                mediaRecorder.start();
+                isRecording = true;
+                
+                // 更新按钮状态
+                document.getElementById('recordBtn').disabled = true;
+                document.getElementById('recordBtn').innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 录音中...';
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('playBtn').disabled = true;
+                
+                // 显示状态
+                showAnalysisStatus("正在录音... 请朗读上方句子。", "status-analyzing");
+                
+            } catch (err) {
+                alert('无法访问麦克风。请确保已授予录音权限，并尝试刷新页面。');
+                console.error('录音错误:', err);
+                showAnalysisStatus("录音失败，请检查麦克风权限。", "status-analyzing");
+            }
+        }
+
+        // 实时更新波形
+        function startRealTimeWaveform() {
+            if (!analyser) return;
+            
+            function updateWaveform() {
+                if (!analyser || !isRecording) return;
+                
+                analyser.getByteTimeDomainData(dataArray);
+                
+                // 简化数据用于显示
+                const displayData = [];
+                const step = Math.floor(dataArray.length / 100);
+                
+                for (let i = 0; i < 100; i++) {
+                    const index = i * step;
+                    if (index < dataArray.length) {
+                        // 将0-255的数据转换为-1到1的范围
+                        displayData.push((dataArray[index] / 128.0) - 1.0);
+                    } else {
+                        displayData.push(0);
+                    }
+                }
+                
+                // 更新图表
+                userChart.data.datasets[0].data = displayData;
+                userChart.update();
+                
+                // 继续更新
+                requestAnimationFrame(updateWaveform);
+            }
+            
+            updateWaveform();
+        }
+
+        // 停止录音
+        function stopRecording() {
+            if (!isRecording || !mediaRecorder) return;
+            
+            mediaRecorder.stop();
+            isRecording = false;
+            
+            // 停止所有音轨
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            
+            // 更新按钮状态
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('recordBtn').innerHTML = '<i class="fas fa-circle"></i> 开始录音';
+            document.getElementById('stopBtn').disabled = true;
+            
+            showAnalysisStatus("录音完成，正在分析...", "status-analyzing");
+        }
+
+        // 播放录音
+        function playRecording() {
+            if (!audioUrl) return;
+            
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            
+            currentAudio = new Audio(audioUrl);
+            currentAudio.play();
+            
+            // 播放时更新波形
+            if (audioContext) {
+                audioContext.close();
+            }
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(currentAudio);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            source.connect(analyser);
+            source.connect(audioContext.destination);
+            
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            startRealTimeWaveform();
+            
+            currentAudio.onended = () => {
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+            };
+        }
+
+        // 处理上传的文件
+        function handleUploadedFile(file) {
+            // 检查文件类型
+            if (!file.type.startsWith('audio/')) {
+                showUploadStatus("请上传音频文件（MP3, WAV, M4A等格式）。", "error");
+                return;
+            }
+            
+            // 检查文件大小（假设1分钟录音约1MB）
+            if (file.size > 5 * 1024 * 1024) { // 5MB限制
+                showUploadStatus("文件过大，请上传1分钟以内的录音（小于5MB）。", "error");
+                return;
+            }
+            
+            // 重置状态
+            resetAnalysis();
+            currentSource = 'upload';
+            
+            // 显示上传状态
+            showUploadStatus(`正在处理文件: ${file.name}`, "uploading");
+            
+            // 创建对象URL
+            audioUrl = URL.createObjectURL(file);
+            
+            // 启用播放按钮
+            document.getElementById('playBtn').disabled = false;
+            
+            // 模拟分析过程
+            simulateFileAnalysis(file);
+        }
+
+        // 显示上传状态
+        function showUploadStatus(message, type) {
+            const statusEl = document.getElementById('uploadStatus');
+            statusEl.textContent = message;
+            statusEl.className = 'analysis-status';
+            
+            if (type === 'uploading') {
+                statusEl.classList.add('status-analyzing');
+            } else if (type === 'error') {
+                statusEl.style.backgroundColor = '#f8d7da';
+                statusEl.style.borderLeft = '5px solid #dc3545';
+                statusEl.style.color = '#721c24';
+            } else if (type === 'success') {
+                statusEl.classList.add('status-complete');
+            }
+            
+            statusEl.style.display = 'block';
+        }
+
+        // 显示分析状态
+        function showAnalysisStatus(message, type) {
+            const statusEl = document.getElementById('analysisStatus');
+            statusEl.textContent = message;
+            statusEl.className = `analysis-status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        // 分析录音
+        function analyzeRecording() {
+            showAnalysisStatus("正在分析您的语调...", "status-analyzing");
+            
+            // 模拟分析延迟
+            setTimeout(() => {
+                // 根据不同的数据源（录音/上传）和句子，生成不同的分析结果
+                const isFromUpload = currentSource === 'upload';
+                const sourceText = isFromUpload ? "上传的录音" : "刚刚的录音";
+                const sentence = sentenceLibrary[currentSentenceIndex];
+                const difficulty = sentence.difficulty;
+                
+                // 根据难度和来源生成不同的分析结果
+                let matchScore, rhythmScore, intonationScore, naturalnessScore;
+                let mainIssue, strength;
+                
+                if (isFromUpload) {
+                    // 上传的录音分析结果
+                    matchScore = 50 + Math.floor(Math.random() * 30);
+                    rhythmScore = 55 + Math.floor(Math.random() * 30);
+                    intonationScore = 45 + Math.floor(Math.random() * 35);
+                    naturalnessScore = 60 + Math.floor(Math.random() * 25);
+                    mainIssue = "音调变化不足，重音位置不准确";
+                    strength = "发音清晰，语速控制良好";
+                } else {
+                    // 实时录音分析结果
+                    if (difficulty === "简单") {
+                        matchScore = 70 + Math.floor(Math.random() * 20);
+                        rhythmScore = 75 + Math.floor(Math.random() * 15);
+                        intonationScore = 65 + Math.floor(Math.random() * 20);
+                        naturalnessScore = 80 + Math.floor(Math.random() * 15);
+                        mainIssue = "部分单词重音可加强";
+                        strength = "节奏感好，发音准确";
+                    } else if (difficulty === "较难") {
+                        matchScore = 40 + Math.floor(Math.random() * 30);
+                        rhythmScore = 50 + Math.floor(Math.random() * 30);
+                        intonationScore = 35 + Math.floor(Math.random() * 30);
+                        naturalnessScore = 45 + Math.floor(Math.random() * 30);
+                        mainIssue = "长句节奏不稳定，语调平淡";
+                        strength = "单词发音准确，尝试表达复杂句子";
+                    } else { // 中等
+                        matchScore = 60 + Math.floor(Math.random() * 25);
+                        rhythmScore = 65 + Math.floor(Math.random() * 20);
+                        intonationScore = 55 + Math.floor(Math.random() * 25);
+                        naturalnessScore = 70 + Math.floor(Math.random() * 20);
+                        mainIssue = "关键词重音不够突出";
+                        strength = "语调自然，流畅度好";
+                    }
+                }
+                
+                // 生成波形数据
+                const userData = [];
+                for (let i = 0; i < 100; i++) {
+                    const basePattern = Math.sin(i * 0.18) * 0.6 + Math.sin(i * 0.35) * 0.4;
+                    const variability = (matchScore / 100) * 0.3;
+                    const randomFactor = Math.random() * variability;
+                    userData.push(basePattern + randomFactor);
+                }
+                
+                // 更新用户波形图
+                userChart.data.datasets[0].data = userData;
+                userChart.update();
+                
+                // 生成评分星星
+                function generateStars(score) {
+                    const filledStars = Math.round(score / 20);
+                    let stars = '';
+                    for (let i = 1; i <= 5; i++) {
+                        stars += i <= filledStars ? '★' : '☆';
+                    }
+                    return `<span style="color: #f39c12;">${stars}</span> ${score}%`;
+                }
+                
+                // 更新诊断结果
+                document.getElementById('resultText').innerHTML = 
+                    `<strong>${sourceText}</strong> 分析完成！句子难度: <strong>${difficulty}</strong><br>
+                    主要问题: <strong class="highlight">${mainIssue}</strong><br>
+                    您的优势: <strong>${strength}</strong>`;
+                
+                const feedbackList = document.getElementById('feedbackList');
+                feedbackList.innerHTML = `
+                    <div style="margin: 10px 0; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span><strong>重音匹配度:</strong></span>
+                            <span>${generateStars(matchScore)}</span>
+                        </div>
+                        <div style="height: 6px; background: #ecf0f1; border-radius: 3px; overflow: hidden;">
+                            <div style="height: 100%; width: ${matchScore}%; background: linear-gradient(90deg, #e74c3c, #f39c12);"></div>
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span><strong>节奏感:</strong></span>
+                            <span>${generateStars(rhythmScore)}</span>
+                        </div>
+                        <div style="height: 6px; background: #ecf0f1; border-radius: 3px; overflow: hidden;">
+                            <div style="height: 100%; width: ${rhythmScore}%; background: linear-gradient(90deg, #3498db, #2ecc71);"></div>
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span><strong>语调起伏:</strong></span>
+                            <span>${generateStars(intonationScore)}</span>
+                        </div>
+                        <div style="height: 6px; background: #ecf0f1; border-radius: 3px; overflow: hidden;">
+                            <div style="height: 100%; width: ${intonationScore}%; background: linear-gradient(90deg, #9b59b6, #3498db);"></div>
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span><strong>整体自然度:</strong></span>
+                            <span>${generateStars(naturalnessScore)}</span>
+                        </div>
+                        <div style="height: 6px; background: #ecf0f1; border-radius: 3px; overflow: hidden;">
+                            <div style="height: 100%; width: ${naturalnessScore}%; background: linear-gradient(90deg, #2ecc71, #27ae60);"></div>
+                        </div>
+                    </div>
+                `;
+                
+                // 生成改进建议
+                const improvementTips = document.getElementById('improvementTips');
+                let tips = '';
+                
+                if (matchScore < 70) {
+                    tips += '<li><strong>重音练习：</strong> 注意句子中的关键词（如名词、动词、形容词），尝试用更强的力度和稍高的音调读出它们。</li>';
+                }
+                if (rhythmScore < 65) {
+                    tips += '<li><strong>节奏控制：</strong> 注意意群的划分，在适当位置稍作停顿，避免整个句子用一个节奏读完。</li>';
+                }
+                if (intonationScore < 60) {
+                    tips += '<li><strong>语调变化：</strong> 一般疑问句用升调，陈述句和特殊疑问句用降调，尝试让语调更有起伏。</li>';
+                }
+                if (naturalnessScore < 70) {
+                    tips += '<li><strong>自然度提升：</strong> 多听母语者的朗读，模仿他们的语调和节奏，注意连读和弱读现象。</li>';
+                }
+

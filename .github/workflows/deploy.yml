@@ -1,29 +1,32 @@
 name: Deploy to GitHub Pages
+
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
       - name: Setup Pages
         uses: actions/configure-pages@v4
+      
+      # ✅ 关键：上传名为 "github-pages" 的构件
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 关键修改：确保每次上传的artifact名称唯一
-          name: github-pages-${{ github.run_id }}
-          path: . # 上传整个仓库，因为您的 tones.html 在根目录
+          name: github-pages  # 必须是这个名称！
+          path: .  # 上传整个仓库
+
   deploy:
     environment:
       name: github-pages
@@ -33,4 +36,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v4  # 会自动寻找名为 "github-pages" 的构件
